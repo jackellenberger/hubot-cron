@@ -1,24 +1,26 @@
-# hubot-cron
+# hubot-cron-commands
 
-hubot-cron adds a cronjob system to hubot to schedule messages on a specific date and time.
+hubot-cron-commands adds a cronjob system to hubot to schedule commands to be run by hubot on a specific date and time.
+
+based heavily on / forked from  miyagawa's hubot-cron.
 
 ## Installation
 
-Add `hubot-cron` to your package.json, run `npm install` and add hubot-cron to `external-scripts.json`.
+Add `hubot-cron-commands` to your package.json, run `npm install` and add hubot-cron to `external-scripts.json`.
 
 Add hubot-cron to your `package.json` dependencies.
 
 ```
 "dependencies": {
-  "hubot-cron": ">= 0.1.0"
+  "hubot-cron-commands": "^0.1.0"
 }
 ```
 
-Add `hubot-cron` to `external-scripts.json`.
+Add `hubot-cron-commands` to `external-scripts.json`.
 
 ```
 > cat external-scripts.json
-> ["hubot-cron"]
+> ["hubot-cron-commands"]
 ```
 
 If you want to specify timezones, you'll need to install the [time](https://github.com/TooTallNate/node-time) module or place an entry for it in your package.json file.
@@ -28,16 +30,18 @@ If you want to specify timezones, you'll need to install the [time](https://gith
 ## Usage
 
 ```
-miyagawa> hubot new job 0 9 * * 1-5 "Good morning everyone!"
+user> hubot new job 0 9 * * 1-5 "echo Good morning everyone!"
 hubot> Job 12345 created
+...
+hubot> Good morning everyone!
 
-miyagawa> hubot list jobs
+user> hubot list jobs
 hubot> (list of jobs)
 
-miyagawa> hubot rm job 12345
+user> hubot rm job 12345
 hubot> Job 12345 removed
 
-miyagawa> hubot tz job 12345 America/Los_Angeles
+user> hubot tz job 12345 America/Los_Angeles
 hubot> Job 12345 updated to use America/Los_Angeles
 ```
 
@@ -46,7 +50,3 @@ You can use any [node-cron](https://github.com/ncb000gt/node-cron) compatible cr
 To persist the cron job in the hubot restart, you're recommended to use redis to persist Hubot brain.
 
 Timezones are specified in [tzdata format](https://en.wikipedia.org/wiki/Tz_database#Examples).
-
-## See Also
-
-`reminder.coffee` in hubot-scripts.

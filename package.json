@@ -1,21 +1,23 @@
 {
-  "author": "Tatsuhiko Miyagawa",
-  "name": "hubot-cron",
-  "version": "0.2.9",
-  "description": "Cron job messaging for hubot",
-  "homepage": "https://github.com/miyagawa/hubot-cron",
+  "author": "Jack Ellenberger",
+  "name": "hubot-cron-commands",
+  "version": "0.1.0",
+  "description": "Cron job commands for hubot",
+  "homepage": "https://github.com/jackellenberger/hubot-cron-commands",
   "main": "./src/index.coffee",
   "repository": {
     "type": "git",
-    "url": "git://github.com/miyagawa/hubot-cron.git"
+    "url": "git://github.com/jackellenberger/hubot-cron-commands.git"
   },
   "license": "MIT",
   "keywords": [
     "hubot",
-    "cron"
+    "cron",
+    "commands"
   ],
   "dependencies": {
     "coffee-script": ">= 1.1.0",
-    "cron": ">= 1.0.1"
+    "cron": ">= 1.0.1",
+    "hubot": "^3.3.1"
   }
 }
