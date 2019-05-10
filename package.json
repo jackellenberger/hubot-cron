@@ -1,7 +1,7 @@
 {
   "author": "Jack Ellenberger",
   "name": "hubot-cron-commands",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cron job commands for hubot",
   "homepage": "https://github.com/jackellenberger/hubot-cron-commands",
   "main": "./src/index.coffee",
