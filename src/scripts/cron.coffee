@@ -30,7 +30,6 @@ module.exports = (robot) ->
       room = job.user.reply_to || job.user.room
       if room == context.message.user.reply_to or room == context.message.user.room
         text += "#{id}: #{job.pattern} @#{room} \"#{job.message}\"\n"
-    text = robot.adapter.removeFormatting text if robot.adapterName == 'slack'
     context.send text if text.length > 0
 
   robot.respond /(?:rm|remove|del|delete) job (\d+)/i, (context) ->
@@ -77,6 +76,7 @@ class Job
     message = @message
     context = @context
     user = @user
+    context.send("Attempting to executing job #{@id}, crontab `#{@pattern} #{message}`")
     robot.listeners.forEach (listener) ->
       if match = message.match(listener.regex)
         textMessage = new hubot.TextMessage user, message
