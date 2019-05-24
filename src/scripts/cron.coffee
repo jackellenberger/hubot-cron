@@ -25,7 +25,7 @@ module.exports = (robot) ->
   robot.brain.on 'loaded', =>
     syncJobs robot
 
-  robot.respond /(?:new|add) job (?:'|"|“)(.*?)(?:'|"|”) ((?:tz=|timezone=)[_\/A-z]*)? ?(.*)$/i, (context) ->
+  robot.respond /(?:new|add) job (?:'|"|“)(.*?)(?:'|"|”) (?:(?:tz=|timezone=)([_\/A-z]*))? ?(.*)$/i, (context) ->
     handleNewJob robot, context, context.match[1], context.match[3], (context.match[2] || "America/Chicago")
 
   robot.respond /(?:list|ls) jobs?/i, (context) ->
@@ -39,6 +39,7 @@ module.exports = (robot) ->
   robot.respond /(?:list|ls) all jobs?/i, (context) ->
     text = ''
     for id, job of JOBS
+      room = job.user.reply_to || job.user.room
       text += "#{id}: #{job.pattern} @#{room} \"#{job.message}\"\n"
     if text.length > 0 then context.send text else context.send "No jobs anywhere, comrade"
 
@@ -86,16 +87,16 @@ class Job
     message = @message
     context = @context
     user = @user
-    context.send("Attempting to executing job #{@id}, crontab `#{@pattern} #{message}`")
+    @context.send("Attempting to executing job #{@id}, crontab `#{@pattern} #{@message}`")
     robot.listeners.forEach (listener) ->
       if match = message.match(listener.regex)
         textMessage = new TextMessage user, message
         newcontext = new Response robot, textMessage, match
         listener.callback newcontext
 
-createNewJob = (robot, pattern, user, message, context) ->
+createNewJob = (robot, pattern, user, message, context, timezone) ->
   id = Math.floor(Math.random() * 1000000) while !id? || JOBS[id]
-  job = registerNewJob robot, id, pattern, user, message, context
+  job = registerNewJob robot, id, pattern, user, message, context, timezone
   robot.brain.data.cronjob[id] = job.serialize()
   id
 
@@ -123,9 +124,9 @@ unregisterJob = (robot, id)->
     return yes
   no
 
-handleNewJob = (robot, context, pattern, message) ->
+handleNewJob = (robot, context, pattern, message, timezone) ->
   try
-    id = createNewJob robot, pattern, context.message.user, message, context
+    id = createNewJob robot, pattern, context.message.user, message, context, timezone
     context.send "Job #{id} created"
   catch error
     context.send "Error caught parsing crontab pattern: #{error}. See http://crontab.org/ for the syntax"
