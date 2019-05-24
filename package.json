@@ -18,6 +18,7 @@
   "dependencies": {
     "coffee-script": ">= 1.1.0",
     "cron": ">= 1.0.1",
-    "hubot": "^3.3.1"
+    "hubot": "^3.3.2",
+    "parent-require": "^1.0.0"
   }
 }

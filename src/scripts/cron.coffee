@@ -11,9 +11,13 @@
 # Author:
 #   Jack Ellenberger <jellenberger@uchicago.edu> based on work by miyagawa
 
+# Take from https://hubot.github.com/docs/adapters/development/#gotchas
+try
+  {Robot,Adapter,TextMessage,User,Response} = require 'hubot'
+catch
+  prequire = require('parent-require')
+  {Robot,Adapter,TextMessage,User,Response} = prequire 'hubot'
 cronJob = require('cron').CronJob
-hubot = require('hubot')
-
 JOBS = {}
 
 module.exports = (robot) ->
@@ -30,7 +34,13 @@ module.exports = (robot) ->
       room = job.user.reply_to || job.user.room
       if room == context.message.user.reply_to or room == context.message.user.room
         text += "#{id}: #{job.pattern} @#{room} \"#{job.message}\"\n"
-    context.send text if text.length > 0
+    if text.length > 0 then context.send text else context.send "No jobs here, chief!"
+
+  robot.respond /(?:list|ls) all jobs?/i, (context) ->
+    text = ''
+    for id, job of JOBS
+      text += "#{id}: #{job.pattern} @#{room} \"#{job.message}\"\n"
+    if text.length > 0 then context.send text else context.send "No jobs anywhere, comrade"
 
   robot.respond /(?:rm|remove|del|delete) job (\d+)/i, (context) ->
     if (id = context.match[1]) and unregisterJob(robot, id)
@@ -79,8 +89,8 @@ class Job
     context.send("Attempting to executing job #{@id}, crontab `#{@pattern} #{message}`")
     robot.listeners.forEach (listener) ->
       if match = message.match(listener.regex)
-        textMessage = new hubot.TextMessage user, message
-        newcontext = new hubot.Response robot, textMessage, match
+        textMessage = new TextMessage user, message
+        newcontext = new Response robot, textMessage, match
         listener.callback newcontext
 
 createNewJob = (robot, pattern, user, message, context) ->
