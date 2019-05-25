@@ -4,14 +4,16 @@
 # Commands:
 #   hubot new job "<crontab format>" <message> - Schedule a cron job to execute another hubot command
 #   hubot new job "<crontab format>" tz=<timezone> <message> - Schedule a cron job to execute another hubot command with cron executing in $timestamp, e.g. America/Chicago
-#   hubot list jobs - List current cron jobs
+#   hubot list jobs - List current cron jobs running in the current channel
+#   hubot list all jobs - List current cron jobs running in all channels
 #   hubot remove job <id> - remove job
 #   hubot timezone job <id> - Set the timezone of an existing cron job
 #
 # Author:
 #   Jack Ellenberger <jellenberger@uchicago.edu> based on work by miyagawa
 
-# Take from https://hubot.github.com/docs/adapters/development/#gotchas
+# Garbage try block to avoid instances where downstream hubot plugins aren't requiring hubot
+# Taken from https://hubot.github.com/docs/adapters/development/#gotchas
 try
   {Robot,Adapter,TextMessage,User,Response} = require 'hubot'
 catch
@@ -22,8 +24,7 @@ JOBS = {}
 
 module.exports = (robot) ->
   robot.brain.data.cronjob or= {}
-  robot.brain.on 'loaded', =>
-    syncJobs robot
+  syncJobs robot
 
   robot.respond /(?:new|add) job (?:'|"|“)(.*?)(?:'|"|”) (?:(?:tz=|timezone=)([_\/A-z]*))? ?(.*)$/i, (context) ->
     handleNewJob robot, context, context.match[1], context.match[3], (context.match[2] || "America/Chicago")
@@ -56,7 +57,7 @@ module.exports = (robot) ->
       context.send "Job #{id} does not exist"
 
 class Job
-  constructor: (id, pattern, user, message, context, timezone) ->
+  constructor: (id, pattern, user, message, timezone) ->
     @id = id
     @pattern = pattern
     # cloning user because adapter may touch it later
@@ -64,7 +65,6 @@ class Job
     clonedUser[k] = v for k,v of user
     @user = clonedUser
     @message = message
-    @context = context
     @timezone = timezone
 
   start: (robot) ->
@@ -85,25 +85,25 @@ class Job
 
   executeCommand: (robot) ->
     message = @message
-    context = @context
     user = @user
-    @context.send("Attempting to executing job #{@id}, crontab `#{@pattern} #{@message}`")
+    envelope = user: @user, room: @user.room
+    robot.send envelope, "Attempting to executing job #{@id}, crontab `#{@pattern} #{@message}`"
     robot.listeners.forEach (listener) ->
       if match = message.match(listener.regex)
         textMessage = new TextMessage user, message
         newcontext = new Response robot, textMessage, match
         listener.callback newcontext
 
-createNewJob = (robot, pattern, user, message, context, timezone) ->
+createNewJob = (robot, pattern, user, message, timezone) ->
   id = Math.floor(Math.random() * 1000000) while !id? || JOBS[id]
-  job = registerNewJob robot, id, pattern, user, message, context, timezone
+  job = registerNewJob robot, id, pattern, user, message, timezone
   robot.brain.data.cronjob[id] = job.serialize()
   id
 
-registerNewJobFromBrain = (robot, id, pattern, user, message, context, timezone) ->
+registerNewJobFromBrain = (robot, id, pattern, user, message, timezone) ->
   # for jobs saved in v0.2.0..v0.2.2
   user = user.user if "user" of user
-  registerNewJob(robot, id, pattern, user, message, context, timezone)
+  registerNewJob(robot, id, pattern, user, message, timezone)
 
 storeJobToBrain = (robot, id, job) ->
   robot.brain.data.cronjob[id] = job.serialize()
@@ -111,8 +111,8 @@ storeJobToBrain = (robot, id, job) ->
   envelope = user: job.user, room: job.user.room
   robot.send envelope, "Job #{id} stored in brain asynchronously"
 
-registerNewJob = (robot, id, pattern, user, message, context, timezone) ->
-  job = new Job(id, pattern, user, message, context, timezone)
+registerNewJob = (robot, id, pattern, user, message, timezone) ->
+  job = new Job(id, pattern, user, message, timezone)
   job.start(robot)
   JOBS[id] = job
 
@@ -126,7 +126,7 @@ unregisterJob = (robot, id)->
 
 handleNewJob = (robot, context, pattern, message, timezone) ->
   try
-    id = createNewJob robot, pattern, context.message.user, message, context, timezone
+    id = createNewJob robot, pattern, context.message.user, message, timezone
     context.send "Job #{id} created"
   catch error
     context.send "Error caught parsing crontab pattern: #{error}. See http://crontab.org/ for the syntax"
