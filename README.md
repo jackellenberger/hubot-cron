@@ -12,7 +12,7 @@ Add hubot-cron to your `package.json` dependencies.
 
 ```
 "dependencies": {
-  "hubot-cron-commands": "^0.1.0"
+  "hubot-cron-commands": "^0.2.0"
 }
 ```
 
@@ -30,7 +30,7 @@ If you want to specify timezones, you'll need to install the [time](https://gith
 ## Usage
 
 ```
-user> hubot new job 0 9 * * 1-5 "echo Good morning everyone!"
+user> hubot new job "0 9 * * 1-5" "hubot echo Good morning everyone!"
 hubot> Job 12345 created
 ...
 hubot> Good morning everyone!
