@@ -16,20 +16,23 @@
 # Taken from https://hubot.github.com/docs/adapters/development/#gotchas
 try
   {Robot,Adapter,TextMessage,User,Response} = require 'hubot'
+  cronJob = require('cron').CronJob
 catch
   prequire = require('parent-require')
   {Robot,Adapter,TextMessage,User,Response} = prequire 'hubot'
-cronJob = require('cron').CronJob
+  cronJob = prequire('cron').CronJob
 JOBS = {}
 
 module.exports = (robot) ->
-  robot.brain.data.cronjob or= {}
+  robot.brain.data._private.cronjob or= {}
   syncJobs robot
 
   robot.respond /(?:new|add) job (?:'|"|“)(.*?)(?:'|"|”) (?:(?:tz=|timezone=)([_\/A-z]*))? ?(.*)$/i, (context) ->
+    syncJobs robot
     handleNewJob robot, context, context.match[1], context.match[3], (context.match[2] || "America/Chicago")
 
   robot.respond /(?:list|ls) jobs?/i, (context) ->
+    syncJobs robot
     text = ''
     for id, job of JOBS
       room = job.user.reply_to || job.user.room
@@ -38,6 +41,7 @@ module.exports = (robot) ->
     if text.length > 0 then context.send text else context.send "No jobs here, chief!"
 
   robot.respond /(?:list|ls) all jobs?/i, (context) ->
+    syncJobs robot
     text = ''
     for id, job of JOBS
       room = job.user.reply_to || job.user.room
@@ -45,12 +49,14 @@ module.exports = (robot) ->
     if text.length > 0 then context.send text else context.send "No jobs anywhere, comrade"
 
   robot.respond /(?:rm|remove|del|delete) job (\d+)/i, (context) ->
+    syncJobs robot
     if (id = context.match[1]) and unregisterJob(robot, id)
       context.send "Job #{id} deleted"
     else
       context.send "Job #{id} does not exist"
 
   robot.respond /(?:tz|timezone) job (\d+) (.*)/i, (context) ->
+    syncJobs robot
     if (id = context.match[1]) and (timezone = context.match[2]) and updateJobTimezone(robot, id, timezone)
       context.send "Job #{id} updated to use #{timezone}"
     else
@@ -97,7 +103,7 @@ class Job
 createNewJob = (robot, pattern, user, message, timezone) ->
   id = Math.floor(Math.random() * 1000000) while !id? || JOBS[id]
   job = registerNewJob robot, id, pattern, user, message, timezone
-  robot.brain.data.cronjob[id] = job.serialize()
+  robot.brain.data._private.cronjob[id] = job.serialize()
   id
 
 registerNewJobFromBrain = (robot, id, pattern, user, message, timezone) ->
@@ -106,7 +112,7 @@ registerNewJobFromBrain = (robot, id, pattern, user, message, timezone) ->
   registerNewJob(robot, id, pattern, user, message, timezone)
 
 storeJobToBrain = (robot, id, job) ->
-  robot.brain.data.cronjob[id] = job.serialize()
+  robot.brain.data._private.cronjob[id] = job.serialize()
 
   envelope = user: job.user, room: job.user.room
   robot.send envelope, "Job #{id} stored in brain asynchronously"
@@ -119,7 +125,7 @@ registerNewJob = (robot, id, pattern, user, message, timezone) ->
 unregisterJob = (robot, id)->
   if JOBS[id]
     JOBS[id].stop()
-    delete robot.brain.data.cronjob[id]
+    delete robot.brain.data._private.cronjob[id]
     delete JOBS[id]
     return yes
   no
@@ -135,17 +141,17 @@ updateJobTimezone = (robot, id, timezone) ->
   if JOBS[id]
     JOBS[id].stop()
     JOBS[id].timezone = timezone
-    robot.brain.data.cronjob[id] = JOBS[id].serialize()
+    robot.brain.data._private.cronjob[id] = JOBS[id].serialize()
     JOBS[id].start(robot)
     return yes
   no
 
 syncJobs = (robot) ->
-  nonCachedJobs = difference(robot.brain.data.cronjob, JOBS)
+  nonCachedJobs = difference(robot.brain.data._private.cronjob, JOBS)
   for own id, job of nonCachedJobs
     registerNewJobFromBrain robot, id, job...
 
-  nonStoredJobs = difference(JOBS, robot.brain.data.cronjob)
+  nonStoredJobs = difference(JOBS, robot.brain.data._private.cronjob)
   for own id, job of nonStoredJobs
     storeJobToBrain robot, id, job
 
