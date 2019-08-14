@@ -93,7 +93,7 @@ class Job
     message = @message
     user = @user
     envelope = user: @user, room: @user.room
-    robot.send envelope, "Attempting to executing job #{@id}, crontab `#{@pattern} #{@message}`"
+    robot.send envelope, "Attempting to execute job #{@id}, crontab `#{@pattern} #{@message}`"
     robot.listeners.forEach (listener) ->
       if match = message.match(listener.regex)
         textMessage = new TextMessage user, message
