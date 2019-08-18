@@ -8,6 +8,8 @@
 #   hubot list all jobs - List current cron jobs running in all channels
 #   hubot remove job <id> - remove job
 #   hubot timezone job <id> - Set the timezone of an existing cron job
+#   hubot silence job <id> - Once you have verified that a job works correctly, stop posting the "attempting to execute" message
+#   hubot verbose job <id> - un-silence a job for debugging or clarity
 #
 # Author:
 #   Jack Ellenberger <jellenberger@uchicago.edu> based on work by miyagawa
@@ -62,8 +64,22 @@ module.exports = (robot) ->
     else
       context.send "Job #{id} does not exist"
 
+  robot.respond /silence job (\d+)/i, (context) ->
+    syncJobs robot
+    if (id = context.match[1]) and silenceJob(robot, id)
+      context.send "Job #{id} silenced"
+    else
+      context.send "Job #{id} could not be silenced"
+
+  robot.respond /verbose job (\d+)/i, (context) ->
+    syncJobs robot
+    if (id = context.match[1]) and verboseJob(robot, id)
+      context.send "Job #{id} unsilenced"
+    else
+      context.send "Job #{id} could not be unsilenced"
+
 class Job
-  constructor: (id, pattern, user, message, timezone) ->
+  constructor: (id, pattern, user, message, timezone, silent) ->
     @id = id
     @pattern = pattern
     # cloning user because adapter may touch it later
@@ -72,18 +88,19 @@ class Job
     @user = clonedUser
     @message = message
     @timezone = timezone
+    @silent = silent
 
   start: (robot) ->
     @cronjob = new cronJob(@pattern, =>
       @executeCommand robot
-    , null, false, @timezone)
+    , null, false, @timezone, @silent)
     @cronjob.start()
 
   stop: ->
     @cronjob.stop()
 
   serialize: ->
-    [@pattern, @user, @message, @timezone]
+    [@pattern, @user, @message, @timezone, @silent]
 
   sendMessage: (robot) ->
     envelope = user: @user, room: @user.room
@@ -93,7 +110,8 @@ class Job
     message = @message
     user = @user
     envelope = user: @user, room: @user.room
-    robot.send envelope, "Attempting to execute job #{@id}, crontab `#{@pattern} #{@message}`"
+    if !@silent
+      robot.send envelope, "Attempting to execute job #{@id}, crontab `#{@pattern} #{@message}`"
     robot.listeners.forEach (listener) ->
       if match = message.match(listener.regex)
         textMessage = new TextMessage user, message
@@ -102,14 +120,14 @@ class Job
 
 createNewJob = (robot, pattern, user, message, timezone) ->
   id = Math.floor(Math.random() * 1000000) while !id? || JOBS[id]
-  job = registerNewJob robot, id, pattern, user, message, timezone
+  job = registerNewJob robot, id, pattern, user, message, timezone, false
   robot.brain.data._private.cronjob[id] = job.serialize()
   id
 
-registerNewJobFromBrain = (robot, id, pattern, user, message, timezone) ->
+registerNewJobFromBrain = (robot, id, pattern, user, message, timezone, silent) ->
   # for jobs saved in v0.2.0..v0.2.2
   user = user.user if "user" of user
-  registerNewJob(robot, id, pattern, user, message, timezone)
+  registerNewJob(robot, id, pattern, user, message, timezone, silent)
 
 storeJobToBrain = (robot, id, job) ->
   robot.brain.data._private.cronjob[id] = job.serialize()
@@ -117,8 +135,8 @@ storeJobToBrain = (robot, id, job) ->
   envelope = user: job.user, room: job.user.room
   robot.send envelope, "Job #{id} stored in brain asynchronously"
 
-registerNewJob = (robot, id, pattern, user, message, timezone) ->
-  job = new Job(id, pattern, user, message, timezone)
+registerNewJob = (robot, id, pattern, user, message, timezone, silent) ->
+  job = new Job(id, pattern, user, message, timezone, silent)
   job.start(robot)
   JOBS[id] = job
 
@@ -143,6 +161,20 @@ updateJobTimezone = (robot, id, timezone) ->
     JOBS[id].timezone = timezone
     robot.brain.data._private.cronjob[id] = JOBS[id].serialize()
     JOBS[id].start(robot)
+    return yes
+  no
+
+silenceJob = (robot, id) ->
+  if JOBS[id]
+    JOBS[id].silent = true
+    robot.brain.data._private.cronjob[id] = JOBS[id].serialize()
+    return yes
+  no
+
+verboseJob = (robot, id) ->
+  if JOBS[id]
+    JOBS[id].silent = false
+    robot.brain.data._private.cronjob[id] = JOBS[id].serialize()
     return yes
   no
 

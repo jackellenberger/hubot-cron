@@ -33,16 +33,21 @@ If you want to specify timezones, you'll need to install the [time](https://gith
 user> hubot new job "0 9 * * 1-5" "hubot echo Good morning everyone!"
 hubot> Job 12345 created
 ...
+hubot> Attempting to execute job 12345, crontab "0 9 * * 1-5" hubot echo Good morning everyone!
 hubot> Good morning everyone!
 
 user> hubot list jobs
 hubot> (list of jobs)
 
-user> hubot rm job 12345
-hubot> Job 12345 removed
-
 user> hubot tz job 12345 America/Los_Angeles
 hubot> Job 12345 updated to use America/Los_Angeles
+
+user> hubot silence 12345
+...
+hubot> Good morning everyone!
+
+user> hubot rm job 12345
+hubot> Job 12345 removed
 ```
 
 You can use any [node-cron](https://github.com/ncb000gt/node-cron) compatible crontab format to schedule messages. Registered message will be sent to the same channel where you created a job.
