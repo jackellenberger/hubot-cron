@@ -42,7 +42,7 @@ hubot> (list of jobs)
 user> hubot tz job 12345 America/Los_Angeles
 hubot> Job 12345 updated to use America/Los_Angeles
 
-user> hubot silence 12345
+user> hubot silence job 12345
 ...
 hubot> Good morning everyone!
 
